@@ -1,6 +1,6 @@
 {
     "SoftwareVersion": "1.0.0",
-    "SoftwareUrl":"",
+    "SoftwareUrl":"http://github.com/Tio30532/Bootstrapper/releases/download/Roblox/TestWare.rar",
     "Status":"False",
     "Changelog":"[+] released"
 }
