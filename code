@@ -1,0 +1,108 @@
+using System;
+using System.IO;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
+
+class Program
+{
+    const string InfoUrl = "https://pastebin.com/raw/yNhqBg95";
+    const string RbxVersionUrl = "https://clientsettings.roblox.com/v2/client-version/WindowsPlayer/channel/live";
+
+    static async Task Main()
+    {
+        await SetConsoleTitleFromJson();
+        PrintAsciiArt();
+        Console.WriteLine("\n[+] fetching version info...");
+
+        string info = await HttpGet(InfoUrl);
+        var infoJson = JObject.Parse(info);
+
+        if (infoJson["Status"]?.ToString() == "False")
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("[+] Phantom V1 is currently down");
+            Thread.Sleep(5000);
+            return;
+        }
+
+        string localVersion = File.Exists("version.txt") ? File.ReadAllText("version.txt") : string.Empty;
+        Console.WriteLine("[+] current Phantom V1 version: " + infoJson["SoftwareVersion"]);
+        Console.WriteLine("[+] current Phantom V1 file version: " + (string.IsNullOrEmpty(localVersion) ? "none" : localVersion));
+
+        if (localVersion != infoJson["SoftwareVersion"]?.ToString())
+        {
+            Console.WriteLine("[+] new version detected!");
+            if (infoJson.ContainsKey("Changelog"))
+            {
+                Console.WriteLine("[+] changelog for new update below\n");
+                Console.WriteLine(infoJson["Changelog"]);
+            }
+            Console.WriteLine("\n[+] downloading Phantom V1...");
+            await DownloadFile(infoJson["SoftwareUrl"]?.ToString(), "Phantom V1.zip");
+            File.WriteAllText("version.txt", infoJson["SoftwareVersion"]?.ToString());
+            Console.WriteLine("[+] Phantom V1 successfully installed! closing in 5 seconds.");
+            Thread.Sleep(5000);
+        }
+        else
+        {
+            Console.WriteLine("[+] you are already up to date. closing in 5 seconds.");
+            Thread.Sleep(5000);
+        }
+    }
+
+    static async Task SetConsoleTitleFromJson()
+    {
+        string response = await HttpGet(RbxVersionUrl);
+        if (!string.IsNullOrEmpty(response))
+        {
+            var data = JObject.Parse(response);
+            Console.Title = "Phantom V1 | " + data["clientVersionUpload"];
+        }
+    }
+
+    static async Task<string> HttpGet(string url)
+    {
+        using (HttpClient client = new HttpClient())
+        {
+            try
+            {
+                return await client.GetStringAsync(url);
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+    }
+
+    static async Task DownloadFile(string url, string outputPath)
+    {
+        using (HttpClient client = new HttpClient())
+        {
+            try
+            {
+                byte[] data = await client.GetByteArrayAsync(url);
+                await Task.Run(() => File.WriteAllBytes(outputPath, data)); // Ensuring async compatibility
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[+] failed to download file: " + ex.Message);
+            }
+        }
+    }
+
+    static void PrintAsciiArt()
+    {
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        Console.WriteLine(@"__________.__                   __                   ____   ________ ");
+        Console.WriteLine(@"\______   \  |__ _____    _____/  |_  ____   _____   \   \ /   /_   |");
+        Console.WriteLine(@" |     ___/  |  \\__  \  /    \   __\/  _ \ /     \   \   Y   / |   |");
+        Console.WriteLine(@" |    |   |   Y  \/ __ \|   |  \  | (  <_> )  Y Y  \   \     /  |   |");
+        Console.WriteLine(@" |____|   |___|  (____  /___|  /__|  \____/|__|_|  /    \___/   |___|");
+        Console.WriteLine(@"               \/     \/     \/                  \/                  ");
+        Console.ForegroundColor = ConsoleColor.White;
+    }
+}
